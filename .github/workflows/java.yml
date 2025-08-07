@@ -2,7 +2,7 @@ name : helloWorld java
 on:
 push:
 branches:
-’**’
+-’**’
 workflow-dispatch:
 jobs:
 build-and-run:
