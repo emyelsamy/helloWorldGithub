@@ -10,4 +10,4 @@ jobs:
           distribution: temurin
           java-version: "21" # or "17"
       - name: Compile & run
-        run: javac Hello.java && java Hello
+        run: javac HelloWorld.java && java HelloWorld
