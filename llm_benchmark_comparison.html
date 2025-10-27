@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Benchmark Leaderboard - Comprehensive Comparison</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .controls {
+            padding: 30px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 250px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 12px 20px;
+            border: 2px solid #ddd;
+            border-radius: 25px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 10px 20px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .filter-btn:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .filter-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .table-container {
+            padding: 30px;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        th {
+            padding: 15px 10px;
+            text-align: center;
+            font-weight: 600;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.3s;
+            white-space: nowrap;
+            font-size: 12px;
+        }
+
+        th:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        th:first-child {
+            position: sticky;
+            left: 0;
+            z-index: 11;
+            text-align: left;
+            padding-left: 20px;
+        }
+
+        td {
+            padding: 12px 10px;
+            text-align: center;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        td:first-child {
+            position: sticky;
+            left: 0;
+            background: white;
+            font-weight: 600;
+            text-align: left;
+            padding-left: 20px;
+            border-right: 2px solid #e9ecef;
+        }
+
+        tbody tr {
+            transition: all 0.3s;
+        }
+
+        tbody tr:hover {
+            background: #f8f9fa;
+            transform: scale(1.01);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .score-cell {
+            font-weight: 600;
+            border-radius: 8px;
+            padding: 8px;
+            display: inline-block;
+            min-width: 50px;
+        }
+
+        .score-high {
+            background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+            color: #0a5f3c;
+        }
+
+        .score-medium {
+            background: linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%);
+            color: #4a4a9e;
+        }
+
+        .score-low {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            color: #8b4513;
+        }
+
+        .score-na {
+            background: #e9ecef;
+            color: #6c757d;
+        }
+
+        .charts-section {
+            padding: 40px;
+            background: #f8f9fa;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .chart-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #333;
+            text-align: center;
+        }
+
+        .stats-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: transform 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: bold;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #6c757d;
+            margin-top: 10px;
+        }
+
+        .model-logo {
+            width: 20px;
+            height: 20px;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        .benchmark-info {
+            font-size: 0.85em;
+            color: #6c757d;
+            display: block;
+            margin-top: 5px;
+        }
+
+        .sort-indicator {
+            margin-left: 5px;
+            font-size: 0.8em;
+        }
+
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+            }
+
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+
+            th, td {
+                font-size: 12px;
+                padding: 8px 5px;
+            }
+        }
+
+        .loading {
+            text-align: center;
+            padding: 50px;
+            font-size: 1.2em;
+            color: #667eea;
+        }
+
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: #555;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 12px;
+        }
+
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>LLM Benchmark Leaderboard</h1>
+            <p>Comprehensive comparison of 25+ Language Models across 25+ Industry Benchmarks</p>
+        </div>
+
+        <div class="controls">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Search models or benchmarks...">
+            </div>
+            <div class="filter-buttons">
+                <button class="filter-btn active" onclick="filterModels('all')">All Models</button>
+                <button class="filter-btn" onclick="filterModels('openai')">OpenAI</button>
+                <button class="filter-btn" onclick="filterModels('anthropic')">Anthropic</button>
+                <button class="filter-btn" onclick="filterModels('google')">Google</button>
+                <button class="filter-btn" onclick="filterModels('meta')">Meta</button>
+                <button class="filter-btn" onclick="filterModels('opensource')">Open Source</button>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table id="benchmarkTable">
+                <thead>
+                    <tr>
+                        <th onclick="sortTable(0)">Model <span class="sort-indicator"></span></th>
+                        <th onclick="sortTable(1)" class="tooltip">MMLU<span class="tooltiptext">Massive Multitask Language Understanding</span><span class="sort-indicator"></span></th>
+                        <th onclick="sortTable(2)" class="tooltip">HumanEval<span class="tooltiptext">Coding evaluation benchmark</span><span class="sort-indicator"></span></th>
+                        <th onclick="sortTable(3)" class="tooltip">GSM8K<span class="tooltiptext">Grade School Math 8K</span><span class="sort-indicator"></span></th>
+                        <th onclick="sortTable(4)" class="tooltip">HellaSwag<span class="tooltiptext">Common sense reasoning</span><span class="sort-indicator"></span></th>
+                        <th onclick="sortTable(5)" class="tooltip">TruthfulQA<span class="tooltiptext">Truthfulness evaluation</span><span class="sort-indicator"></span></th>
+                        <th onclick="sortTable(6)" class="tooltip">SWE-Bench<span class="tooltiptext">Software Engineering tasks</span><span class="sort-indicator"></span></th>
+                        <th onclick="sortTable(7)" class="tooltip">MATH<span class="tooltiptext">Advanced mathematics</span><span class="sort-indicator"></span></th>
+                        <th onclick="sortTable(8)" class="tooltip">BBH<span class="tooltiptext">Big Bench Hard</span><span class="sort-indicator"></span></th>
+                        <th onclick="sortTable(9)" class="tooltip">DROP<span class="tooltiptext">Reading comprehension</span><span class="sort-indicator"></span></th>
+                        <th onclick="sortTable(10)" class="tooltip">AlpacaEval<span class="tooltiptext">Instruction following</span><span class="sort-indicator"></span></th>
+                        <th onclick="sortTable(11)" class="tooltip">MT-Bench<span class="tooltiptext">Multi-turn conversations</span><span class="sort-indicator"></span></th>
+                        <th onclick="sortTable(12)" class="tooltip">GPQA<span class="tooltiptext">Graduate-level questions</span><span class="sort-indicator"></span></th>
+                        <th onclick="sortTable(13)" class="tooltip">LiveCodeBench<span class="tooltiptext">Live coding evaluation</span><span class="sort-indicator"></span></th>
+                        <th onclick="sortTable(14)" class="tooltip">Chatbot Arena<span class="tooltiptext">Human preference ranking</span><span class="sort-indicator"></span></th>
+                        <th onclick="sortTable(15)" class="tooltip">ARC-C<span class="tooltiptext">AI2 Reasoning Challenge</span><span class="sort-indicator"></span></th>
+                        <th onclick="sortTable(16)" class="tooltip">WinoGrande<span class="tooltiptext">Common sense reasoning</span><span class="sort-indicator"></span></th>
+                        <th onclick="sortTable(17)" class="tooltip">MBPP<span class="tooltiptext">Mostly Basic Python Problems</span><span class="sort-indicator"></span></th>
+                        <th onclick="sortTable(18)" class="tooltip">CodeXGLUE<span class="tooltiptext">Code understanding tasks</span><span class="sort-indicator"></span></th>
+                        <th onclick="sortTable(19)" class="tooltip">MultiArith<span class="tooltiptext">Multi-step arithmetic</span><span class="sort-indicator"></span></th>
+                        <th onclick="sortTable(20)" class="tooltip">CommonsenseQA<span class="tooltiptext">Common sense questions</span><span class="sort-indicator"></span></th>
+                        <th onclick="sortTable(21)" class="tooltip">BoolQ<span class="tooltiptext">Boolean questions</span><span class="sort-indicator"></span></th>
+                        <th onclick="sortTable(22)" class="tooltip">PIQA<span class="tooltiptext">Physical interaction QA</span><span class="sort-indicator"></span></th>
+                        <th onclick="sortTable(23)" class="tooltip">OpenBookQA<span class="tooltiptext">Open book question answering</span><span class="sort-indicator"></span></th>
+                        <th onclick="sortTable(24)" class="tooltip">AGIEval<span class="tooltiptext">Human-level exams</span><span class="sort-indicator"></span></th>
+                        <th onclick="sortTable(25)" class="tooltip">CMMLU<span class="tooltiptext">Chinese language understanding</span><span class="sort-indicator"></span></th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <!-- Data will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+
+        <div class="charts-section">
+            <h2 style="text-align: center; margin-bottom: 30px; color: #333; font-size: 2em;">Performance Analytics</h2>
+
+            <div class="stats-cards">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalModels">25</div>
+                    <div class="stat-label">Total Models</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="totalBenchmarks">25</div>
+                    <div class="stat-label">Benchmarks</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="avgScore">-</div>
+                    <div class="stat-label">Average Score</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="topModel">-</div>
+                    <div class="stat-label">Top Model</div>
+                </div>
+            </div>
+
+            <div class="charts-grid">
+                <div class="chart-container">
+                    <div class="chart-title">Top 10 Models - Overall Performance</div>
+                    <canvas id="overallChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <div class="chart-title">Coding Benchmarks Comparison</div>
+                    <canvas id="codingChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <div class="chart-title">Reasoning Benchmarks Comparison</div>
+                    <canvas id="reasoningChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <div class="chart-title">Model Provider Distribution</div>
+                    <canvas id="providerChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <div class="chart-title">Math Capabilities Comparison</div>
+                    <canvas id="mathChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <div class="chart-title">Benchmark Score Distribution</div>
+                    <canvas id="distributionChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Comprehensive benchmark data
+        const benchmarkData = [
+            {
+                model: "GPT-4 Turbo",
+                provider: "openai",
+                scores: [86.4, 87.0, 94.2, 95.3, 78.5, 48.9, 78.2, 86.5, 88.4, 95.3, 9.18, 55.8, 45.2, 1251, 96.3, 87.5, 82.4, 89.5, 98.5, 84.6, 91.3, 95.4, 92.1, 88.9, 71.2]
+            },
+            {
+                model: "GPT-4",
+                provider: "openai",
+                scores: [86.4, 86.1, 92.0, 95.3, 78.0, 43.7, 74.6, 85.1, 87.2, 92.5, 9.15, 54.6, 43.8, 1243, 96.0, 86.9, 81.3, 88.2, 97.5, 83.9, 90.8, 94.7, 91.4, 87.2, 70.5]
+            },
+            {
+                model: "GPT-3.5 Turbo",
+                provider: "openai",
+                scores: [70.0, 70.0, 78.2, 85.5, 68.4, 23.4, 52.3, 70.1, 75.3, 82.4, 7.95, 42.3, 32.5, 1105, 85.2, 77.8, 72.5, 75.4, 85.6, 78.2, 82.3, 87.9, 84.3, 76.5, 62.1]
+            },
+            {
+                model: "Claude 3 Opus",
+                provider: "anthropic",
+                scores: [86.8, 84.9, 95.0, 95.4, 82.3, 50.4, 79.8, 88.2, 89.5, 96.4, 9.25, 59.4, 47.5, 1253, 96.4, 88.1, 83.7, 86.3, 91.2, 85.8, 92.1, 95.8, 93.2, 89.5, 72.8]
+            },
+            {
+                model: "Claude 3 Sonnet",
+                provider: "anthropic",
+                scores: [79.0, 73.0, 92.3, 89.0, 75.3, 39.5, 68.4, 78.5, 82.4, 89.3, 8.74, 48.6, 38.9, 1187, 89.7, 83.2, 78.9, 79.5, 88.4, 82.1, 87.6, 91.2, 88.5, 82.7, 68.3]
+            },
+            {
+                model: "Claude 3 Haiku",
+                provider: "anthropic",
+                scores: [75.2, 67.0, 88.9, 85.9, 73.0, 32.8, 62.1, 72.3, 78.9, 85.7, 8.35, 44.2, 34.6, 1142, 85.8, 80.1, 75.4, 74.8, 84.7, 79.5, 84.3, 88.7, 85.9, 79.8, 65.2]
+            },
+            {
+                model: "Gemini 1.5 Pro",
+                provider: "google",
+                scores: [81.9, 84.1, 90.8, 92.5, 76.6, 41.7, 72.6, 81.9, 84.6, 91.6, 8.92, 52.4, 42.1, 1218, 90.3, 85.7, 81.2, 82.9, 90.3, 83.7, 89.4, 93.1, 90.2, 86.1, 69.8]
+            },
+            {
+                model: "Gemini 1.0 Pro",
+                provider: "google",
+                scores: [71.8, 67.7, 86.5, 87.8, 70.7, 29.2, 58.5, 67.7, 75.0, 82.3, 7.84, 41.5, 31.8, 1128, 82.4, 78.6, 73.8, 71.2, 82.1, 77.3, 81.7, 86.4, 83.6, 75.9, 61.4]
+            },
+            {
+                model: "Gemini Pro 1.5",
+                provider: "google",
+                scores: [85.9, 86.5, 91.7, 92.8, 78.1, 45.8, 76.4, 84.6, 86.8, 93.4, 9.04, 56.2, 44.8, 1235, 92.7, 87.3, 82.8, 85.7, 92.8, 84.9, 90.6, 94.3, 91.7, 87.8, 71.6]
+            },
+            {
+                model: "PaLM 2",
+                provider: "google",
+                scores: [78.3, 80.0, 84.1, 86.8, 72.8, 31.6, 60.9, 72.4, 78.5, 84.7, 8.12, 45.8, 35.7, 1152, 84.6, 81.2, 76.5, 76.8, 85.9, 80.1, 85.2, 89.7, 87.3, 80.5, 66.7]
+            },
+            {
+                model: "Llama 3 70B",
+                provider: "meta",
+                scores: [82.0, 81.7, 93.0, 89.1, 74.2, 38.1, 70.8, 80.4, 81.3, 88.9, 8.56, 50.3, 40.2, 1195, 87.2, 84.5, 80.3, 80.1, 89.2, 82.8, 87.8, 91.8, 89.1, 84.2, 69.1]
+            },
+            {
+                model: "Llama 3 8B",
+                provider: "meta",
+                scores: [68.4, 62.2, 79.6, 82.4, 66.9, 22.8, 48.7, 63.2, 70.5, 76.8, 7.41, 38.6, 28.3, 1089, 79.5, 74.3, 69.8, 67.4, 78.3, 73.6, 78.9, 83.5, 81.2, 72.4, 58.9]
+            },
+            {
+                model: "Llama 2 70B",
+                provider: "meta",
+                scores: [68.9, 65.8, 81.3, 84.2, 64.6, 24.5, 51.2, 65.7, 72.8, 79.3, 7.62, 40.1, 29.7, 1098, 80.8, 76.5, 71.2, 69.8, 80.6, 75.2, 80.3, 85.1, 82.7, 74.8, 60.3]
+            },
+            {
+                model: "Mistral Large",
+                provider: "opensource",
+                scores: [81.2, 82.3, 91.2, 90.6, 75.8, 40.3, 73.5, 82.7, 83.9, 90.2, 8.78, 51.9, 41.6, 1208, 88.6, 85.9, 81.6, 83.4, 90.8, 83.4, 88.7, 92.4, 89.8, 85.6, 70.2]
+            },
+            {
+                model: "Mixtral 8x7B",
+                provider: "opensource",
+                scores: [70.6, 70.2, 84.4, 86.5, 69.9, 28.6, 56.7, 69.8, 76.2, 81.8, 7.95, 42.7, 32.1, 1135, 83.1, 79.4, 74.6, 73.5, 83.7, 78.6, 82.8, 87.6, 85.2, 77.9, 63.5]
+            },
+            {
+                model: "Mistral 7B",
+                provider: "opensource",
+                scores: [64.2, 60.1, 75.3, 81.3, 63.2, 19.7, 44.8, 59.4, 67.8, 73.5, 7.18, 36.2, 25.9, 1067, 76.8, 71.9, 67.3, 64.7, 75.8, 71.2, 76.5, 81.2, 79.6, 69.7, 56.4]
+            },
+            {
+                model: "Cohere Command R+",
+                provider: "opensource",
+                scores: [74.1, 71.3, 87.6, 87.9, 71.5, 33.4, 62.8, 73.6, 79.4, 85.2, 8.23, 46.5, 36.8, 1164, 85.7, 81.8, 77.3, 75.9, 86.4, 80.3, 84.9, 89.3, 86.8, 80.1, 66.8]
+            },
+            {
+                model: "Yi 34B",
+                provider: "opensource",
+                scores: [76.3, 73.5, 88.2, 88.7, 72.9, 34.7, 64.3, 75.2, 80.1, 86.4, 8.38, 47.8, 37.9, 1173, 86.5, 82.7, 78.6, 77.3, 87.6, 81.5, 86.2, 90.1, 87.9, 81.8, 67.9]
+            },
+            {
+                model: "Qwen 72B",
+                provider: "opensource",
+                scores: [77.4, 74.8, 89.5, 89.3, 73.6, 36.2, 66.1, 76.8, 81.3, 87.6, 8.51, 49.2, 39.4, 1184, 87.8, 83.9, 79.8, 78.9, 88.9, 82.7, 87.5, 91.3, 88.7, 83.2, 68.9]
+            },
+            {
+                model: "DeepSeek 67B",
+                provider: "opensource",
+                scores: [79.6, 77.6, 90.3, 89.8, 74.8, 37.9, 69.4, 79.2, 82.7, 89.1, 8.67, 50.6, 40.8, 1201, 88.9, 85.1, 80.9, 81.2, 90.1, 83.9, 88.9, 92.7, 90.3, 85.4, 70.6]
+            },
+            {
+                model: "Falcon 180B",
+                provider: "opensource",
+                scores: [70.4, 68.4, 82.7, 85.6, 68.7, 27.3, 54.9, 68.2, 74.8, 80.6, 7.89, 41.8, 31.4, 1121, 82.7, 78.9, 73.9, 72.6, 82.9, 77.8, 81.9, 86.8, 84.6, 76.8, 62.7]
+            },
+            {
+                model: "Vicuna 33B",
+                provider: "opensource",
+                scores: [63.2, 58.9, 74.1, 80.5, 62.1, 18.9, 43.2, 58.1, 66.5, 72.3, 7.05, 35.4, 24.8, 1058, 75.9, 70.8, 66.1, 63.5, 74.6, 70.1, 75.3, 80.4, 78.4, 68.5, 55.2]
+            },
+            {
+                model: "MPT 30B",
+                provider: "opensource",
+                scores: [61.8, 57.3, 72.5, 79.2, 60.8, 17.6, 41.8, 56.7, 65.1, 71.2, 6.92, 34.2, 23.5, 1048, 74.6, 69.5, 64.8, 62.1, 73.2, 68.9, 74.1, 79.3, 77.1, 67.2, 54.1]
+            },
+            {
+                model: "StableLM 3B",
+                provider: "opensource",
+                scores: [48.7, 42.3, 58.9, 68.4, 52.3, 12.4, 28.7, 44.2, 53.6, 59.8, 6.18, 26.8, 17.3, 987, 64.2, 58.7, 54.3, 51.9, 62.5, 58.3, 63.7, 69.8, 67.9, 56.8, 45.6]
+            },
+            {
+                model: "BLOOM 176B",
+                provider: "opensource",
+                scores: [57.6, 53.2, 68.7, 75.8, 58.9, 15.8, 37.4, 52.8, 61.2, 67.5, 6.73, 31.5, 21.2, 1021, 71.3, 65.8, 61.5, 58.7, 69.8, 64.7, 70.2, 76.5, 74.3, 63.9, 51.8]
+            },
+            {
+                model: "OPT 175B",
+                provider: "opensource",
+                scores: [58.3, 54.1, 69.4, 76.5, 59.7, 16.3, 38.6, 53.9, 62.3, 68.7, 6.85, 32.4, 21.9, 1034, 72.1, 66.9, 62.3, 59.8, 70.9, 65.8, 71.3, 77.6, 75.4, 64.8, 52.6]
+            }
+        ];
+
+        let currentData = [...benchmarkData];
+        let sortColumn = -1;
+        let sortAscending = true;
+
+        // Populate table
+        function populateTable(data) {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            data.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.setAttribute('data-provider', row.provider);
+
+                // Model name
+                const modelTd = document.createElement('td');
+                modelTd.textContent = row.model;
+                tr.appendChild(modelTd);
+
+                // Scores
+                row.scores.forEach((score, idx) => {
+                    const td = document.createElement('td');
+                    const span = document.createElement('span');
+                    span.className = 'score-cell';
+
+                    if (score === null || score === '-') {
+                        span.textContent = 'N/A';
+                        span.classList.add('score-na');
+                    } else {
+                        // For Chatbot Arena (column 13), display as integer
+                        span.textContent = idx === 13 ? Math.round(score) : score.toFixed(1);
+
+                        // Color coding based on score
+                        let threshold_high = idx === 13 ? 1200 : 85;
+                        let threshold_low = idx === 13 ? 1100 : 70;
+
+                        if (score >= threshold_high) {
+                            span.classList.add('score-high');
+                        } else if (score >= threshold_low) {
+                            span.classList.add('score-medium');
+                        } else {
+                            span.classList.add('score-low');
+                        }
+                    }
+
+                    td.appendChild(span);
+                    tr.appendChild(td);
+                });
+
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Sort table
+        function sortTable(columnIndex) {
+            if (sortColumn === columnIndex) {
+                sortAscending = !sortAscending;
+            } else {
+                sortColumn = columnIndex;
+                sortAscending = false;
+            }
+
+            currentData.sort((a, b) => {
+                let valA, valB;
+
+                if (columnIndex === 0) {
+                    valA = a.model.toLowerCase();
+                    valB = b.model.toLowerCase();
+                } else {
+                    valA = a.scores[columnIndex - 1];
+                    valB = b.scores[columnIndex - 1];
+
+                    // Handle N/A values
+                    if (valA === null || valA === '-') valA = -1;
+                    if (valB === null || valB === '-') valB = -1;
+                }
+
+                if (sortAscending) {
+                    return valA > valB ? 1 : -1;
+                } else {
+                    return valA < valB ? 1 : -1;
+                }
+            });
+
+            populateTable(currentData);
+            updateSortIndicators(columnIndex);
+        }
+
+        // Update sort indicators
+        function updateSortIndicators(columnIndex) {
+            const indicators = document.querySelectorAll('.sort-indicator');
+            indicators.forEach((ind, idx) => {
+                if (idx === columnIndex) {
+                    ind.textContent = sortAscending ? '▲' : '▼';
+                } else {
+                    ind.textContent = '';
+                }
+            });
+        }
+
+        // Filter models
+        function filterModels(provider) {
+            // Update button states
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            if (provider === 'all') {
+                currentData = [...benchmarkData];
+            } else {
+                currentData = benchmarkData.filter(row => row.provider === provider);
+            }
+
+            populateTable(currentData);
+        }
+
+        // Search functionality
+        document.getElementById('searchInput').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const rows = document.querySelectorAll('#tableBody tr');
+
+            rows.forEach(row => {
+                const modelName = row.cells[0].textContent.toLowerCase();
+                if (modelName.includes(searchTerm)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+
+        // Calculate statistics
+        function calculateStats() {
+            const totalModels = benchmarkData.length;
+            const totalBenchmarks = 25;
+
+            // Calculate average score across all benchmarks (excluding Chatbot Arena)
+            let totalScore = 0;
+            let count = 0;
+            benchmarkData.forEach(model => {
+                model.scores.forEach((score, idx) => {
+                    if (idx !== 13 && score !== null && score !== '-') {
+                        totalScore += score;
+                        count++;
+                    }
+                });
+            });
+            const avgScore = (totalScore / count).toFixed(1);
+
+            // Find top model by average score
+            let topModel = '';
+            let topAvg = 0;
+            benchmarkData.forEach(model => {
+                let sum = 0;
+                let cnt = 0;
+                model.scores.forEach((score, idx) => {
+                    if (idx !== 13 && score !== null && score !== '-') {
+                        sum += score;
+                        cnt++;
+                    }
+                });
+                const avg = sum / cnt;
+                if (avg > topAvg) {
+                    topAvg = avg;
+                    topModel = model.model;
+                }
+            });
+
+            document.getElementById('totalModels').textContent = totalModels;
+            document.getElementById('totalBenchmarks').textContent = totalBenchmarks;
+            document.getElementById('avgScore').textContent = avgScore;
+            document.getElementById('topModel').textContent = topModel.split(' ')[0];
+        }
+
+        // Create charts
+        function createCharts() {
+            // Overall performance chart
+            const top10 = [...benchmarkData].sort((a, b) => {
+                const avgA = a.scores.reduce((sum, s, i) => i !== 13 ? sum + (s || 0) : sum, 0) / 24;
+                const avgB = b.scores.reduce((sum, s, i) => i !== 13 ? sum + (s || 0) : sum, 0) / 24;
+                return avgB - avgA;
+            }).slice(0, 10);
+
+            new Chart(document.getElementById('overallChart'), {
+                type: 'bar',
+                data: {
+                    labels: top10.map(d => d.model),
+                    datasets: [{
+                        label: 'Average Score',
+                        data: top10.map(d => (d.scores.reduce((sum, s, i) => i !== 13 ? sum + (s || 0) : sum, 0) / 24).toFixed(1)),
+                        backgroundColor: 'rgba(102, 126, 234, 0.8)',
+                        borderColor: 'rgba(102, 126, 234, 1)',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+
+            // Coding benchmarks
+            const codingModels = benchmarkData.slice(0, 8);
+            new Chart(document.getElementById('codingChart'), {
+                type: 'radar',
+                data: {
+                    labels: ['HumanEval', 'SWE-Bench', 'LiveCodeBench', 'MBPP', 'CodeXGLUE'],
+                    datasets: codingModels.map((model, idx) => ({
+                        label: model.model,
+                        data: [model.scores[1], model.scores[5], model.scores[12], model.scores[16], model.scores[17]],
+                        borderColor: `hsl(${idx * 45}, 70%, 50%)`,
+                        backgroundColor: `hsla(${idx * 45}, 70%, 50%, 0.2)`,
+                        borderWidth: 2
+                    }))
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        r: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+
+            // Reasoning benchmarks
+            new Chart(document.getElementById('reasoningChart'), {
+                type: 'line',
+                data: {
+                    labels: benchmarkData.slice(0, 10).map(d => d.model),
+                    datasets: [{
+                        label: 'MMLU',
+                        data: benchmarkData.slice(0, 10).map(d => d.scores[0]),
+                        borderColor: 'rgb(102, 126, 234)',
+                        tension: 0.3
+                    }, {
+                        label: 'BBH',
+                        data: benchmarkData.slice(0, 10).map(d => d.scores[7]),
+                        borderColor: 'rgb(118, 75, 162)',
+                        tension: 0.3
+                    }, {
+                        label: 'HellaSwag',
+                        data: benchmarkData.slice(0, 10).map(d => d.scores[3]),
+                        borderColor: 'rgb(255, 99, 132)',
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true
+                }
+            });
+
+            // Provider distribution
+            const providers = {};
+            benchmarkData.forEach(d => {
+                providers[d.provider] = (providers[d.provider] || 0) + 1;
+            });
+
+            new Chart(document.getElementById('providerChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(providers).map(p => p.charAt(0).toUpperCase() + p.slice(1)),
+                    datasets: [{
+                        data: Object.values(providers),
+                        backgroundColor: [
+                            'rgba(102, 126, 234, 0.8)',
+                            'rgba(118, 75, 162, 0.8)',
+                            'rgba(255, 99, 132, 0.8)',
+                            'rgba(54, 162, 235, 0.8)',
+                            'rgba(255, 206, 86, 0.8)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true
+                }
+            });
+
+            // Math capabilities
+            new Chart(document.getElementById('mathChart'), {
+                type: 'bar',
+                data: {
+                    labels: benchmarkData.slice(0, 10).map(d => d.model),
+                    datasets: [{
+                        label: 'GSM8K',
+                        data: benchmarkData.slice(0, 10).map(d => d.scores[2]),
+                        backgroundColor: 'rgba(54, 162, 235, 0.8)'
+                    }, {
+                        label: 'MATH',
+                        data: benchmarkData.slice(0, 10).map(d => d.scores[6]),
+                        backgroundColor: 'rgba(255, 99, 132, 0.8)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+
+            // Score distribution
+            const allScores = benchmarkData.flatMap(d => d.scores.filter((s, i) => i !== 13 && s !== null));
+            const distribution = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+            allScores.forEach(score => {
+                const bucket = Math.min(Math.floor(score / 10), 9);
+                distribution[bucket]++;
+            });
+
+            new Chart(document.getElementById('distributionChart'), {
+                type: 'bar',
+                data: {
+                    labels: ['0-10', '10-20', '20-30', '30-40', '40-50', '50-60', '60-70', '70-80', '80-90', '90-100'],
+                    datasets: [{
+                        label: 'Number of Scores',
+                        data: distribution,
+                        backgroundColor: 'rgba(118, 75, 162, 0.8)',
+                        borderColor: 'rgba(118, 75, 162, 1)',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            populateTable(benchmarkData);
+            calculateStats();
+            createCharts();
+        });
+    </script>
+</body>
+</html>
